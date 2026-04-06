@@ -60,6 +60,16 @@ Thumbs.db
 Desktop.ini
 
 # =====================
+# 대용량 파일
+# =====================
+*.deb
+*.rpm
+*.dmg
+*.iso
+*.tar.gz
+*.zip
+
+# =====================
 # Celery
 # =====================
 celerybeat-schedule
