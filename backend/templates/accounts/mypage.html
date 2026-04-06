@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}마이페이지{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1>내 정보</h1>
+    <div id="myInfoBox" class="detail-box">
+        <p>로딩 중...</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}

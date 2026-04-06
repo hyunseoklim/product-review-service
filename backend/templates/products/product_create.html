@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}상품 등록{% endblock %}
+
+{% block content %}
+<section class="card product-create-card">
+    <div class="page-header">
+        <h1>상품 등록</h1>
+    </div>
+
+    <form id="productCreateForm" class="form product-create-form">
+        <div class="form-group">
+            <label for="name">상품 이름</label>
+            <input type="text" id="name" name="name" placeholder="상품 이름을 입력하세요." required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">설명</label>
+            <textarea id="description" name="description" placeholder="상품 설명을 입력하세요."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="price">가격</label>
+            <input type="number" id="price" name="price" placeholder="가격을 입력하세요." required>
+        </div>
+
+        <div class="form-group">
+            <label for="image">이미지</label>
+            <input type="file" id="image" name="image" accept="image/*">
+        </div>
+
+        <div class="product-create-actions">
+            <button type="submit" class="btn-primary">상품 등록</button>
+            <a href="/products/" class="btn">목록으로</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/product-create.js' %}"></script>
+{% endblock %}

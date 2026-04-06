@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Product Review Service{% endblock %}</title>
+
+    <!-- 공통 CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+
+<body>
+
+    <!-- 공통 네비게이션 -->
+    {% include "includes/navbar.html" %}
+
+    <main class="container">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- 공통 하단정보 -->
+    {% include "footer.html" %}
+
+    <!-- Axios CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- 공통 API 인스턴스 -->
+    <script src="{% static 'js/api.js' %}"></script>
+
+    <!-- 페이지별 JS -->
+    {% block script %}
+    {% endblock %}
+</body>
+
+</html>

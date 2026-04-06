@@ -1,0 +1,252 @@
+name: Monorepo CI (Django + FastAPI + Celery + Redis + Postgres)
+
+on:
+  push:
+    branches: ["main", "develop"]
+  pull_request:
+    branches: ["main", "develop"]
+
+jobs:
+  app-tests:
+    name: App Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_DB: product_db
+          POSTGRES_USER: product_user
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U product_user -d product_db"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DJANGO_SECRET_KEY: ci-secret-key
+      DJANGO_DEBUG: "False"
+      DJANGO_ALLOWED_HOSTS: "127.0.0.1,localhost"
+
+      DB_NAME: product_db
+      DB_USER: product_user
+      DB_PASSWORD: password
+      DB_HOST: 127.0.0.1
+      DB_PORT: 5432
+
+      REDIS_URL: redis://127.0.0.1:6379/0
+      FASTAPI_BASE_URL: http://127.0.0.1:8001
+
+      PYTHONUNBUFFERED: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install ai-server dependencies
+        working-directory: ai-server
+        run: |
+          pip install -r requirements.txt
+
+      - name: Wait for PostgreSQL
+        run: |
+          python - <<'PY'
+          import socket
+          import time
+
+          for i in range(30):
+              try:
+                  with socket.create_connection(("127.0.0.1", 5432), timeout=2):
+                      print("PostgreSQL is ready")
+                      break
+              except OSError:
+                  print(f"Waiting for PostgreSQL... {i+1}/30")
+                  time.sleep(2)
+          else:
+              raise SystemExit("PostgreSQL did not become ready in time")
+          PY
+
+      - name: Install PostgreSQL client tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Enable pgvector extension
+        env:
+          PGPASSWORD: password
+        run: |
+          psql \
+            -h 127.0.0.1 \
+            -U product_user \
+            -d product_db \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+      - name: Wait for Redis
+        run: |
+          python - <<'PY'
+          import socket
+          import time
+
+          for i in range(30):
+              try:
+                  with socket.create_connection(("127.0.0.1", 6379), timeout=2):
+                      print("Redis is ready")
+                      break
+              except OSError:
+                  print(f"Waiting for Redis... {i+1}/30")
+                  time.sleep(2)
+          else:
+              raise SystemExit("Redis did not become ready in time")
+          PY
+
+      - name: Django system check
+        working-directory: backend
+        run: |
+          python manage.py check
+
+      - name: Run migrations
+        working-directory: backend
+        run: |
+          python manage.py migrate --noinput
+
+      - name: Check missing migrations
+        working-directory: backend
+        run: |
+          python manage.py makemigrations --check --dry-run
+
+      - name: Run Django tests
+        working-directory: backend
+        run: |
+          python manage.py test
+
+      - name: Celery smoke import
+        working-directory: backend
+        run: |
+          python - <<'PY'
+          import os
+          os.environ.setdefault("DJANGO_SETTINGS_MODULE", "mysite.settings")
+
+          import django
+          django.setup()
+
+          from mysite.celery import app
+          print("Celery app loaded:", app.main)
+          PY
+
+      - name: FastAPI smoke import
+        working-directory: ai-server
+        run: |
+          python - <<'PY'
+          import importlib
+
+          module = importlib.import_module("main")
+          print("FastAPI module imported:", module)
+          PY
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    needs: app-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build backend image
+        working-directory: backend
+        run: |
+          docker build -t product-review-backend:ci .
+
+      - name: Build ai-server image
+        working-directory: ai-server
+        run: |
+          docker build -t product-review-ai:ci .
+
+  integration-compose:
+    name: Docker Compose Integration Test
+    runs-on: ubuntu-latest
+    needs: docker-build
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create CI .env file
+        working-directory: backend
+        run: |
+          cat <<EOF > .env
+          DJANGO_SECRET_KEY=ci-secret-key
+          DJANGO_DEBUG=False
+          DJANGO_ALLOWED_HOSTS=127.0.0.1,localhost
+
+          DB_NAME=product_db
+          DB_USER=product_user
+          DB_PASSWORD=password
+          DB_HOST=db
+          DB_PORT=5432
+
+          REDIS_URL=redis://redis:6379/0
+          FASTAPI_BASE_URL=http://fastapi:8001
+          EOF
+
+      - name: Show docker compose config
+        run: |
+          docker compose config
+
+      - name: Start full stack with docker compose
+        run: |
+          docker compose up -d --build
+
+      - name: Wait for containers to initialize
+        run: |
+          sleep 25
+
+      - name: Show running containers
+        run: |
+          docker compose ps
+
+      - name: Backend health check
+        run: |
+          curl -f http://127.0.0.1:8000/admin/login/
+
+      - name: FastAPI health check
+        run: |
+          curl -f http://127.0.0.1:8001/
+
+      - name: Celery container check
+        run: |
+          docker compose ps celery
+
+      - name: Print logs if failed
+        if: failure()
+        run: |
+          docker compose logs --no-color
+
+      - name: Shutdown containers
+        if: always()
+        run: |
+          docker compose down -v

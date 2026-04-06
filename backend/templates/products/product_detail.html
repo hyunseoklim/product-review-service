@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}상품 상세{% endblock %}
+
+{% block content %}
+<section class="card">
+
+    <div id="productDetailBox" class="detail-box">
+        <p>로딩 중...</p>
+    </div>
+
+    <div class="product-create-actions" style="margin-top: 20px;">
+        <button type="button" id="editBtn" class="btn-primary">수정</button>
+
+        <!-- [수정] JS와 id를 맞추기 위해 deleteBtn → deleteProductBtn 으로 변경 -->
+        <button type="button" id="deleteProductBtn" class="btn-danger">삭제</button>
+
+        <a href="/products/" class="btn">목록</a>
+    </div>
+</section>
+
+<section class="card" style="margin-top: 24px;">
+    <h2>리뷰 작성</h2>
+
+    <form id="reviewCreateForm" class="form" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="content">리뷰 내용</label>
+            <textarea id="content" name="content" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="rating">평점</label>
+            <input type="number" id="rating" name="rating" min="1" max="5" required>
+        </div>
+
+        <div class="form-group">
+            <label for="images">리뷰 이미지</label>
+            <input type="file" id="images" name="images" multiple accept="image/*">
+        </div>
+
+        <div id="previewBox" class="preview-box"></div>
+
+        <button type="submit" class="btn">리뷰 등록</button>
+    </form>
+</section>
+
+<section class="card" style="margin-top: 24px;">
+    <h2>리뷰 목록</h2>
+
+    <!-- [수정] JS에서 사용하는 리뷰 목록 컨테이너는 reviewList 하나만 사용 -->
+    <div id="reviewList">
+        <p>리뷰를 불러오는 중...</p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    // [유지] JS에서 사용하는 상품 id 전달
+    window.PRODUCT_ID = "{{ view.kwargs.pk }}";
+</script>
+
+<!-- [유지] 상세 페이지 JS 연결 -->
+<script src="{% static 'js/product-detail.js' %}"></script>
+{% endblock %}

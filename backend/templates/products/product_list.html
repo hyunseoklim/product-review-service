@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}상품 목록{% endblock %}
+
+{% block content %}
+<section class="card">
+    <div class="page-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <h1>상품 목록</h1>
+
+        <div style="display:flex; gap:10px;">
+            <a href="/products/create/" class="btn-primary">상품 등록</a>
+        </div>
+    </div>
+
+    <div id="productList" class="grid"></div>
+
+    <div class="pagination">
+        <button type="button" id="prevBtn">이전</button>
+        <span id="pageInfo">1 페이지</span>
+        <button type="button" id="nextBtn">다음</button>
+    </div>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="{% static 'js/product-list.js' %}"></script>
+{% endblock %}

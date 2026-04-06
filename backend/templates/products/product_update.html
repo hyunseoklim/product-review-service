@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}상품 수정{% endblock %}
+
+{% block content %}
+<section class="card product-create-card">
+    <h1>상품 수정</h1>
+
+    <form id="productUpdateForm" class="form product-create-form">
+        <div class="form-group">
+            <label for="name">상품 이름</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">설명</label>
+            <textarea id="description" name="description"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="price">가격</label>
+            <input type="number" id="price" name="price" required>
+        </div>
+
+        <div class="form-group">
+            <label for="image">이미지</label>
+            <input type="file" id="image" name="image" accept="image/*">
+        </div>
+
+        <div class="form-group">
+            <label>현재 이미지</label>
+            <div class="preview-box">
+                <img id="imagePreview" class="preview-image" src="" alt="현재 이미지 미리보기" style="display: none;">
+            </div>
+        </div>
+
+        <div class="product-create-actions">
+            <button type="submit" class="btn-primary">수정 완료</button>
+            <a href="/products/" class="btn">목록으로</a>
+        </div>
+    </form>
+</section>
+{% endblock %}
+
+{% block script %}
+<script src="{% static 'js/product-update.js' %}"></script>
+{% endblock %}

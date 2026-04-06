@@ -1,0 +1,191 @@
+[
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$81FphGLfmwVDT0TRLj3wgI$AtII8zQo5NOx3FqlDWf6Sodqdbh0brsMTRinuJfbhVc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "test",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-23T05:13:12.161Z",
+    "created_at": "2026-03-23T05:13:12.581Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$3EiRyaxG1JhklGKh9g6lDj$kBZihG1yV++K0Rr2Letz9JHbde7/w+PyKg8NbMCXWJ4=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-23T06:27:02.231Z",
+    "created_at": "2026-03-23T06:27:02.622Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 3,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$qo6QcnPlPWm5fIskchO4EU$bXqlDW69WHSRlf0xf6oANZ9UfAFJTWJiqLJSQRD//pM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "testuser2",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T05:28:21.780Z",
+    "created_at": "2026-03-24T05:28:22.211Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "accounts.user",
+  "pk": 4,
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$g2wx6MkIen8aXtn5LCvWFS$RBHqf9a2/mk5KasosWuWGbKuDxzDtCZabTtr/eWVfvs=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "testuser3",
+    "first_name": "",
+    "last_name": "",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-03-24T05:30:56.423Z",
+    "created_at": "2026-03-24T05:30:56.747Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "products.product",
+  "pk": 1,
+  "fields": {
+    "name": "크림",
+    "description": null,
+    "price": "10000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:13:19.405Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 2,
+  "fields": {
+    "name": "상품 1",
+    "description": "상품 설명 1",
+    "price": "10000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:17.952Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 3,
+  "fields": {
+    "name": "상품 2",
+    "description": "상품 설명 2",
+    "price": "20000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:25.639Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 4,
+  "fields": {
+    "name": "상품 3",
+    "description": "상품 설명 3",
+    "price": "30000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:29.759Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 5,
+  "fields": {
+    "name": "상품 4",
+    "description": "상품 설명 4",
+    "price": "40000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:32.640Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 6,
+  "fields": {
+    "name": "상품 4",
+    "description": "상품 설명 4",
+    "price": "40000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:41.723Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 7,
+  "fields": {
+    "name": "상품 5",
+    "description": "상품 설명 5",
+    "price": "50000.00",
+    "image": "",
+    "created_at": "2026-03-23T05:32:46.019Z"
+  }
+},
+{
+  "model": "products.product",
+  "pk": 8,
+  "fields": {
+    "name": "테스트 상품",
+    "description": "리뷰 테스트용 상품",
+    "price": "10000.00",
+    "image": "",
+    "created_at": "2026-03-23T06:27:08.484Z"
+  }
+},
+{
+  "model": "reviews.review",
+  "pk": 2,
+  "fields": {
+    "user": 1,
+    "product": 1,
+    "content": "이 제품은 정말 만족스럽습니다.",
+    "rating": 5,
+    "is_public": true,
+    "created_at": "2026-03-23T05:21:55.911Z",
+    "updated_at": "2026-03-23T05:21:55.911Z"
+  }
+},
+{
+  "model": "reviews.review",
+  "pk": 3,
+  "fields": {
+    "user": 2,
+    "product": 8,
+    "content": "테스트 리뷰입니다.",
+    "rating": 5,
+    "is_public": true,
+    "created_at": "2026-03-23T06:27:14.675Z",
+    "updated_at": "2026-03-23T06:27:14.675Z"
+  }
+}
