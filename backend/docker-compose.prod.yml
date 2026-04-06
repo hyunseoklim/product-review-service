@@ -5,10 +5,12 @@ services:
     image: ankane/pgvector:v0.5.1
     container_name: product_review_postgres
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: product_review_db
-      POSTGRES_USER: product_review_user
-      POSTGRES_PASSWORD: product_review_password
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - product_review_postgres_data:/var/lib/postgresql/data
     networks:
