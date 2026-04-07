@@ -104,6 +104,11 @@ jobs:
             -U product_user \
             -d product_db \
             -c "CREATE EXTENSION IF NOT EXISTS vector;"
+          psql \
+            -h 127.0.0.1 \
+            -U product_user \
+            -d template1 \
+            -c "CREATE EXTENSION IF NOT EXISTS vector;"
 
       - name: Wait for Redis
         run: |
