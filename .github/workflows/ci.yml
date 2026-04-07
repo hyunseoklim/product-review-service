@@ -141,7 +141,7 @@ jobs:
       - name: Run Django tests
         working-directory: backend
         run: |
-          python manage.py test
+          python manage.py test apps
 
       - name: Celery smoke import
         working-directory: backend
