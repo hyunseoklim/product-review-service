@@ -40,3 +40,6 @@ PyJWT==2.12.1
 beautifulsoup4
 lxml
 gunicorn
+
+django-storages==1.14.4
+boto3==1.38.0

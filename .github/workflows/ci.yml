@@ -52,6 +52,12 @@ jobs:
 
       PYTHONUNBUFFERED: "1"
 
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_STORAGE_BUCKET_NAME_STATIC: product-review-statics
+      AWS_STORAGE_BUCKET_NAME_MEDIA: product-review-medium
+      AWS_S3_REGION_NAME: ap-northeast-2
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -216,13 +222,21 @@ jobs:
 
           REDIS_URL=redis://redis:6379/0
           FASTAPI_BASE_URL=http://fastapi:8001
+
+          AWS_ACCESS_KEY_ID=dummy
+          AWS_SECRET_ACCESS_KEY=dummy
+          AWS_STORAGE_BUCKET_NAME_STATIC=product-review-statics
+          AWS_STORAGE_BUCKET_NAME_MEDIA=product-review-medium
+          AWS_S3_REGION_NAME=ap-northeast-2
           EOF
 
       - name: Show docker compose config
+        working-directory: backend
         run: |
           docker compose config
 
       - name: Start full stack with docker compose
+        working-directory: backend
         run: |
           docker compose up -d --build
 
@@ -231,6 +245,7 @@ jobs:
           sleep 25
 
       - name: Show running containers
+        working-directory: backend
         run: |
           docker compose ps
 
@@ -243,15 +258,18 @@ jobs:
           curl -f http://127.0.0.1:8001/
 
       - name: Celery container check
+        working-directory: backend
         run: |
           docker compose ps celery
 
       - name: Print logs if failed
         if: failure()
+        working-directory: backend
         run: |
           docker compose logs --no-color
 
       - name: Shutdown containers
         if: always()
+        working-directory: backend
         run: |
           docker compose down -v
