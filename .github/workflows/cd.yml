@@ -19,5 +19,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.EC2_PORT }}
           script: |
-            cd /home/ubuntu/product_review_service/backend
+            cd /home/ec2-user/product-review-service
             ./deploy.sh
