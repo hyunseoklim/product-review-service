@@ -1,17 +1,16 @@
 version: "3.9"
 
 services:
-  # =========================================================
-  # [기존] PostgreSQL
-  # =========================================================
   db:
     image: ankane/pgvector:v0.5.1
     container_name: product_review_postgres
     restart: always
+    env_file:
+      - ./backend/.env.dev
     environment:
-      POSTGRES_DB: product_db
-      POSTGRES_USER: product_user
-      POSTGRES_PASSWORD: password
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5433:5432"
     volumes:
@@ -19,9 +18,15 @@ services:
     networks:
       - app-network
 
-  # =========================================================
-  # [추가] Django (DRF 서버)
-  # =========================================================
+  redis:
+    image: redis:7
+    container_name: redis-new
+    restart: always
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
   web:
     build: ./backend
     container_name: drf-web
@@ -32,20 +37,31 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./backend/.env
-    environment:
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-      - FASTAPI_BASE_URL=http://fastapi:8001
+      - ./backend/.env.dev
     depends_on:
       - db
       - redis
+      - fastapi
     networks:
       - app-network
 
-  # =========================================================
-  # [추가] FastAPI (AI 서버)
-  # =========================================================
+  celery:
+    build: ./backend
+    container_name: celery-worker
+    command: celery -A mysite worker --loglevel=info --pool=solo
+    restart: always
+    volumes:
+      - ./backend:/app
+    env_file:
+      - ./backend/.env.dev
+    depends_on:
+      - db
+      - redis
+      - web
+      - fastapi
+    networks:
+      - app-network
+
   fastapi:
     build:
       context: ./ai-server
@@ -56,42 +72,6 @@ services:
       - ./ai-server:/app
     ports:
       - "8001:8001"
-    networks:
-      - app-network
-
-  # =========================================================
-  # [추가] Celery Worker
-  # =========================================================
-  celery:
-    build: ./backend
-    container_name: celery-worker
-    command: celery -A mysite worker --loglevel=info --pool=solo
-    restart: always
-    volumes:
-      - ./backend:/app
-    env_file:
-      - ./backend/.env
-    environment:
-      - DB_HOST=db
-      - REDIS_URL=redis://redis:6379/0
-      - FASTAPI_BASE_URL=http://fastapi:8001
-    depends_on:
-      - db
-      - redis
-      - web
-      - fastapi
-    networks:
-      - app-network
-
-  # =========================================================
-  # [추가] Redis (Celery Broker + Result Backend)
-  # =========================================================
-  redis:
-    image: redis:7
-    container_name: redis-new
-    restart: always
-    ports:
-      - "6379:6379"
     networks:
       - app-network
 
