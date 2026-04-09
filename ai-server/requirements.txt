@@ -10,3 +10,4 @@ sentence-transformers
 torch
 transformers
 redis
+prometheus-fastapi-instrumentator

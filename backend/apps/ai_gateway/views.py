@@ -2,36 +2,34 @@
 # 기존: from requests import RequestException
 # 변경: requests.exceptions 에서 직접 import
 from requests.exceptions import RequestException
-
-# [추가]
-# Celery 작업의 현재 상태 조회를 위해 AsyncResult import 추가
 from celery.result import AsyncResult
-
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
-
 from django.shortcuts import get_object_or_404
 from apps.reviews.models import Review
+from .serializers import EmbeddingRequestSerializer, SimilarityRequestSerializer
+from .services import FastAPIClient
+from .models import AIAnalysisTask
+from .tasks import analyze_review_similarity_task
 
-from .serializers import (
-    EmbeddingRequestSerializer,
-    SimilarityRequestSerializer,
+# [추가] Prometheus 메트릭
+from prometheus_client import Counter, Histogram
+import time
+
+
+# 분석 요청 수
+AI_ANALYZE_REQUEST_COUNT = Counter(
+    "ai_analyze_request_total",
+    "Total AI analyze requests",
 )
 
-# [유지]
-# Embedding / Similarity API는 여전히 FastAPI를 직접 호출
-from .services import FastAPIClient
-
-# [수정]
-# 기존: ReviewSimilarityResult 를 import 해서 View 안에서 직접 저장했음
-# 변경: 비동기 작업 상태 저장용 AIAnalysisTask import
-from .models import AIAnalysisTask
-
-# [추가]
-# 실제 AI 분석은 Celery task로 이동했으므로 task import 추가
-from .tasks import analyze_review_similarity_task
+# 분석 요청 처리 시간
+AI_ANALYZE_DURATION = Histogram(
+    "ai_analyze_duration_seconds",
+    "AI analyze request registration duration",
+)
 
 
 class EmbeddingAPIView(APIView):
@@ -134,8 +132,9 @@ class ReviewAnalyzeAPIView(APIView):
     # 변경 후에는 실제 분석 로직이 tasks.py 로 이동했으므로 여기서는 제거됨
 
     def post(self, request, review_id):
-        # [유지]
-        # 기준 리뷰 존재 여부 먼저 확인
+        AI_ANALYZE_REQUEST_COUNT.inc()
+        start_total = time.time()
+
         source_review = get_object_or_404(
             Review.objects.select_related("user", "product"),
             id=review_id,
@@ -182,15 +181,8 @@ class ReviewAnalyzeAPIView(APIView):
             similarity_threshold=0.45,
         )
 
-        # =========================================================
-        # [수정]
-        # 기존:
-        # 200 OK + 분석 결과(JSON) 즉시 반환
-        #
-        # 변경:
-        # 202 ACCEPTED + task_id만 반환
-        # 실제 결과는 나중에 상태 조회 API로 확인
-        # =========================================================
+        AI_ANALYZE_DURATION.observe(time.time() - start_total)
+
         return Response(
             {
                 "detail": "AI 분석 작업이 등록되었습니다.",

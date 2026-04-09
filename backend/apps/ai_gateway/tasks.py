@@ -23,14 +23,58 @@ from .models import AIAnalysisTask, ReviewEmbedding, ReviewSimilarityResult
 # [역할] FastAPI 임베딩 API 호출용
 from .services import FastAPIClient
 
-# [역할] 결과를 Redis Pub/Sub으로 WebSocket에 전달
 import redis
 import json
 import logging
+import time
 
+# [추가] Prometheus 메트릭
+from prometheus_client import Counter, Histogram
 
-# [역할] 로그 출력기
 logger = logging.getLogger(__name__)
+
+
+# 후보 리뷰 조회 시간
+AI_CANDIDATE_QUERY_DURATION = Histogram(
+    "ai_candidate_query_duration_seconds",
+    "Candidate review query duration inside celery task",
+)
+
+# FastAPI 호출 시간
+AI_FASTAPI_DURATION = Histogram(
+    "ai_fastapi_duration_seconds",
+    "FastAPI call duration inside celery task",
+)
+
+# DB 저장 시간
+AI_DB_SAVE_DURATION = Histogram(
+    "ai_db_save_duration_seconds",
+    "DB save duration inside celery task",
+)
+
+# 전체 task 처리 시간
+AI_TASK_TOTAL_DURATION = Histogram(
+    "ai_task_total_duration_seconds",
+    "Total AI processing duration inside celery task",
+)
+
+# FastAPI 에러 수
+AI_FASTAPI_ERROR_COUNT = Counter(
+    "ai_fastapi_error_total",
+    "Total FastAPI call errors inside celery task",
+)
+
+# DB 저장 에러 수
+AI_DB_SAVE_ERROR_COUNT = Counter(
+    "ai_db_save_error_total",
+    "Total DB save errors inside celery task",
+)
+
+# 유사도 저장 성공 수
+AI_SIMILARITY_SAVED_COUNT = Counter(
+    "ai_similarity_saved_total",
+    "Total similarity results saved inside celery task",
+)
 
 
 def get_similarity_label(score: float) -> str:
@@ -66,9 +110,9 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
 
     # [역할] 현재 사용하는 임베딩 모델 이름
     MODEL_NAME = "upskyy/e5-small-korean"
-
-    # [역할] 너무 낮은 점수는 결과에서 제외하기 위한 기준값
     SIMILARITY_THRESHOLD = 0.45
+
+    task_start = time.time()
 
     logger.info(f"[START] Task 시작 | task_id={self.request.id} review_id={review_id}")
 
@@ -105,22 +149,28 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
         # ---------------------------------------------------
         # 2) 기준 리뷰 임베딩 생성 후 DB 저장
         # ---------------------------------------------------
-        # [핵심]
-        # FastAPI에 텍스트를 보내서 384차원 벡터를 받아와
-        source_embedding = FastAPIClient.get_embedding(source_review.content)
+        fastapi_start = time.time()
+        try:
+            source_embedding = FastAPIClient.get_embedding(source_review.content)
+            AI_FASTAPI_DURATION.observe(time.time() - fastapi_start)
+        except Exception:
+            AI_FASTAPI_ERROR_COUNT.inc()
+            raise
 
-        # [핵심]
-        # ReviewEmbedding 테이블에 기준 리뷰 벡터 저장
-        # 이미 있으면 update, 없으면 create
-        ReviewEmbedding.objects.update_or_create(
-            review=source_review,
-            defaults={"embedding": source_embedding},
-        )
+        db_start = time.time()
+        try:
+            ReviewEmbedding.objects.update_or_create(
+                review=source_review,
+                defaults={"embedding": source_embedding},
+            )
+            AI_DB_SAVE_DURATION.observe(time.time() - db_start)
+        except Exception:
+            AI_DB_SAVE_ERROR_COUNT.inc()
+            raise
+
         logger.info(f"[EMBED] 기준 리뷰 임베딩 저장 완료 | review_id={source_review.id}")
 
-        # ---------------------------------------------------
-        # 3) 같은 상품의 다른 리뷰들 조회
-        # ---------------------------------------------------
+        query_start = time.time()
         candidate_reviews = (
             Review.objects
             .select_related("user")
@@ -131,6 +181,7 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
             .exclude(id=source_review.id)
             .order_by("-created_at")[:20]
         )
+        AI_CANDIDATE_QUERY_DURATION.observe(time.time() - query_start)
 
         candidate_count = candidate_reviews.count()
         logger.info(f"[CANDIDATES] 후보 리뷰 개수={candidate_count}")
@@ -155,14 +206,25 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
             if exists:
                 continue
 
-            # [역할] FastAPI에서 후보 리뷰 임베딩 생성
-            candidate_embedding = FastAPIClient.get_embedding(candidate.content)
+            fastapi_start = time.time()
+            try:
+                candidate_embedding = FastAPIClient.get_embedding(candidate.content)
+                AI_FASTAPI_DURATION.observe(time.time() - fastapi_start)
+            except Exception:
+                AI_FASTAPI_ERROR_COUNT.inc()
+                raise
 
-            # [역할] 후보 리뷰 벡터를 DB에 저장
-            ReviewEmbedding.objects.create(
-                review=candidate,
-                embedding=candidate_embedding,
-            )
+            db_start = time.time()
+            try:
+                ReviewEmbedding.objects.create(
+                    review=candidate,
+                    embedding=candidate_embedding,
+                )
+                AI_DB_SAVE_DURATION.observe(time.time() - db_start)
+            except Exception:
+                AI_DB_SAVE_ERROR_COUNT.inc()
+                raise
+
             logger.info(f"[EMBED] 후보 리뷰 임베딩 생성 | candidate_id={candidate.id}")
 
         # ---------------------------------------------------
@@ -202,24 +264,28 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
             # [역할] 사람이 보기 쉬운 라벨 생성
             similarity_label = get_similarity_label(score)
 
-            # [역할]
-            # 유사도 결과 저장
-            # 이미 있으면 갱신, 없으면 생성
-            saved_result, _ = ReviewSimilarityResult.objects.update_or_create(
-                source_review=source_review,
-                compared_review=compared_review,
-                model_name=MODEL_NAME,
-                defaults={
-                    "product": source_review.product,
-                    "requested_by_id": requested_by_id,
-                    "similarity_score": score,
-                    "similarity_label": similarity_label,
-                    "similarity_threshold": SIMILARITY_THRESHOLD,
-                    "source_review_snapshot": source_review.content,
-                    "compared_review_snapshot": compared_review.content,
-                    "compared_username_snapshot": compared_review.user.username,
-                },
-            )
+            db_start = time.time()
+            try:
+                saved_result, _ = ReviewSimilarityResult.objects.update_or_create(
+                    source_review=source_review,
+                    compared_review=compared_review,
+                    model_name=MODEL_NAME,
+                    defaults={
+                        "product": source_review.product,
+                        "requested_by_id": requested_by_id,
+                        "similarity_score": score,
+                        "similarity_label": similarity_label,
+                        "similarity_threshold": SIMILARITY_THRESHOLD,
+                        "source_review_snapshot": source_review.content,
+                        "compared_review_snapshot": compared_review.content,
+                        "compared_username_snapshot": compared_review.user.username,
+                    },
+                )
+                AI_DB_SAVE_DURATION.observe(time.time() - db_start)
+                AI_SIMILARITY_SAVED_COUNT.inc()
+            except Exception:
+                AI_DB_SAVE_ERROR_COUNT.inc()
+                raise
 
             logger.info(
                 f"[SAVE] 유사도 저장 | compared_review_id={compared_review.id} score={score}"
@@ -284,7 +350,8 @@ def analyze_review_similarity_task(self, review_id: int, requested_by_id: int | 
             json.dumps(response_data, ensure_ascii=False),
         )
 
-        # [역할] Celery task 반환값
+        AI_TASK_TOTAL_DURATION.observe(time.time() - task_start)
+
         return response_data
 
     except Exception as e:

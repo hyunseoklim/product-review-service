@@ -85,6 +85,18 @@ services:
       - ./backend/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
       - web
+      - fastapi
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-server
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
     networks:
       - app-network
 
