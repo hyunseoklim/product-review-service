@@ -43,3 +43,5 @@ gunicorn
 
 django-storages==1.14.4
 boto3==1.38.0
+
+django-prometheus

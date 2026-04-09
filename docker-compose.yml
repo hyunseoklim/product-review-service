@@ -75,6 +75,19 @@ services:
     networks:
       - app-network
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-server
+    restart: always
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./backend/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - web
+    networks:
+      - app-network
+
 volumes:
   product_review_postgres_data:
 
